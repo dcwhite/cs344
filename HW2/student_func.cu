@@ -102,6 +102,9 @@
 
 #include "utils.h"
 
+#define MIN(x,y) ((x) < (y) ? (x) : (y))
+#define MAX(x,y) ((x) > (y) ? (x) : (y))
+
 __global__
 void gaussian_blur(const unsigned char* const inputChannel,
                    unsigned char* const outputChannel,
@@ -126,10 +129,39 @@ void gaussian_blur(const unsigned char* const inputChannel,
    if ( thread_2D_pos.x >= numCols ||
         thread_2D_pos.y >= numRows )
    {
+     //printf("gaussian_blur out of bounds: thread_2D %d x %d ...thread_1D = %d \n", thread_2D_pos.x, thread_2D_pos.y, thread_1D_pos);
        return;
    }
 
-   outputChannel[thread_1D_pos] = inputChannel[thread_1D_pos];
+   //printf("some filter values: %f %f", filter[0], filter[1]);
+   int row = thread_2D_pos.y;
+   int col = thread_2D_pos.x;
+    //for (int r = 0; r < (int)numRows; ++r) {
+    //for (int c = 0; c < (int)numCols; ++c) {
+      float result = 0.f;
+      //For every value in the filter around the pixel (c, r)
+      for (int filter_r = -filterWidth/2; filter_r <= filterWidth/2; ++filter_r) {
+        for (int filter_c = -filterWidth/2; filter_c <= filterWidth/2; ++filter_c) {
+          //Find the global image position for this filter position
+          //clamp to boundary of the image
+		      int image_r = MIN(MAX(row + filter_r, 0), static_cast<int>(numRows - 1));
+          int image_c = MIN(MAX(col + filter_c, 0), static_cast<int>(numCols - 1));
+
+          float image_value = static_cast<float>(inputChannel[image_r * numCols + image_c]);
+          float filter_value = filter[(filter_r + filterWidth/2) * filterWidth + filter_c + filterWidth/2];
+
+          result += image_value * filter_value;
+        }
+      }
+
+      outputChannel[thread_1D_pos] = static_cast<unsigned char>(result);
+    //}
+
+
+
+
+
+   //outputChannel[thread_1D_pos] = inputChannel[thread_1D_pos];
   
   // NOTE: If a thread's absolute position 2D position is within the image, but some of
   // its neighbors are outside the image, then you will need to be extra careful. Instead
@@ -166,6 +198,7 @@ void separateChannels(const uchar4* const inputImageRGBA,
    if ( thread_2D_pos.x >= numCols ||
         thread_2D_pos.y >= numRows )
    {
+     //printf("separate out of bounds: thread_2D %d (%u) x %d (%u) ...thread_1D = %d \n", thread_2D_pos.x, numCols, thread_2D_pos.y, numRows, thread_1D_pos);
        return;
    }
    //printf("\t%d precopy\n", thread_1D_pos);
@@ -234,6 +267,7 @@ void allocateMemoryAndCopyToGPU(const size_t numRowsImage, const size_t numColsI
   //be sure to use checkCudaErrors like the above examples to
   //be able to tell if anything goes wrong
   //IMPORTANT: Notice that we pass a pointer to a pointer to cudaMalloc
+  checkCudaErrors(cudaMalloc(&d_filter, sizeof(float) * filterWidth * filterWidth));
 
   printf("copy memory for the filter on the GPU\n");
   //TODO:
@@ -241,6 +275,7 @@ void allocateMemoryAndCopyToGPU(const size_t numRowsImage, const size_t numColsI
   //on the GPU.  cudaMemcpy(dst, src, numBytes, cudaMemcpyHostToDevice);
   //Remember to use checkCudaErrors!
 
+  checkCudaErrors(cudaMemcpy(d_filter, h_filter, sizeof(float) * filterWidth * filterWidth, cudaMemcpyHostToDevice));
 }
 
 void your_gaussian_blur(const uchar4 * const h_inputImageRGBA, uchar4 * const d_inputImageRGBA,
@@ -256,13 +291,14 @@ void your_gaussian_blur(const uchar4 * const h_inputImageRGBA, uchar4 * const d_
   //TODO:
   //Compute correct grid size (i.e., number of blocks per kernel launch)
   //from the image size and and block size.
-  const dim3 gridSize(numRows / 8 + 1, numCols / 8 + 1, 1);
+  const dim3 gridSize(numCols / blockSize.x + 1, numRows / blockSize.y + 1, 1);
 
   //TODO: Launch a kernel for separating the RGBA image into different color channels
 
   std::cout << "pic size: " << numRows << " x " << numCols << std::endl;
   std::cout << "block size: " << blockSize.x << " x " << blockSize.y << std::endl;
   std::cout << "grid size: " << gridSize.x << " x " << gridSize.y << std::endl;
+  std::cout << "filter width: " << filterWidth << std::endl;
 
   std::cout << "calling separateChannels" << std::endl;
   separateChannels<<<gridSize, blockSize>>>(d_inputImageRGBA, numRows, numCols, d_red, d_green, d_blue);
