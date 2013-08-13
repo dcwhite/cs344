@@ -251,15 +251,15 @@ float         *d_filter;
 void allocateMemoryAndCopyToGPU(const size_t numRowsImage, const size_t numColsImage,
                                 const float* const h_filter, const size_t filterWidth)
 {
-  printf("allocateMemoryAndCopyToGPU\n");
-  std::cout << "allocating temp color buffers to size: " << numRowsImage * numColsImage << std::endl;
+  //printf("allocateMemoryAndCopyToGPU\n");
+  //std::cout << "allocating temp color buffers to size: " << numRowsImage * numColsImage << std::endl;
   //allocate memory for the three different channels
   //original
   checkCudaErrors(cudaMalloc(&d_red,   sizeof(unsigned char) * numRowsImage * numColsImage));
   checkCudaErrors(cudaMalloc(&d_green, sizeof(unsigned char) * numRowsImage * numColsImage));
   checkCudaErrors(cudaMalloc(&d_blue,  sizeof(unsigned char) * numRowsImage * numColsImage));
 
-  printf("allocate memory for the filter on the GPU\n");
+  //printf("allocate memory for the filter on the GPU\n");
   //TODO:
   //Allocate memory for the filter on the GPU
   //Use the pointer d_filter that we have already declared for you
@@ -269,7 +269,7 @@ void allocateMemoryAndCopyToGPU(const size_t numRowsImage, const size_t numColsI
   //IMPORTANT: Notice that we pass a pointer to a pointer to cudaMalloc
   checkCudaErrors(cudaMalloc(&d_filter, sizeof(float) * filterWidth * filterWidth));
 
-  printf("copy memory for the filter on the GPU\n");
+  //printf("copy memory for the filter on the GPU\n");
   //TODO:
   //Copy the filter on the host (h_filter) to the memory you just allocated
   //on the GPU.  cudaMemcpy(dst, src, numBytes, cudaMemcpyHostToDevice);
@@ -295,24 +295,24 @@ void your_gaussian_blur(const uchar4 * const h_inputImageRGBA, uchar4 * const d_
 
   //TODO: Launch a kernel for separating the RGBA image into different color channels
 
-  std::cout << "pic size: " << numRows << " x " << numCols << std::endl;
-  std::cout << "block size: " << blockSize.x << " x " << blockSize.y << std::endl;
-  std::cout << "grid size: " << gridSize.x << " x " << gridSize.y << std::endl;
-  std::cout << "filter width: " << filterWidth << std::endl;
+  //std::cout << "pic size: " << numRows << " x " << numCols << std::endl;
+  //std::cout << "block size: " << blockSize.x << " x " << blockSize.y << std::endl;
+  //std::cout << "grid size: " << gridSize.x << " x " << gridSize.y << std::endl;
+  //std::cout << "filter width: " << filterWidth << std::endl;
 
-  std::cout << "calling separateChannels" << std::endl;
+  //std::cout << "calling separateChannels" << std::endl;
   separateChannels<<<gridSize, blockSize>>>(d_inputImageRGBA, numRows, numCols, d_red, d_green, d_blue);
 
   // Call cudaDeviceSynchronize(), then call checkCudaErrors() immediately after
   // launching your kernel to make sure that you didn't make any mistakes.
   cudaDeviceSynchronize(); checkCudaErrors(cudaGetLastError());
 
-  std::cout << "calling gaussian_blur for d_red" << std::endl;
+  //std::cout << "calling gaussian_blur for d_red" << std::endl;
   //TODO: Call your convolution kernel here 3 times, once for each color channel.
   gaussian_blur<<<gridSize, blockSize>>>(d_red, d_redBlurred, numRows, numCols, d_filter, filterWidth);
-  std::cout << "calling gaussian_blur for d_green" << std::endl;
+  //std::cout << "calling gaussian_blur for d_green" << std::endl;
   gaussian_blur<<<gridSize, blockSize>>>(d_green, d_greenBlurred, numRows, numCols, d_filter, filterWidth);
-  std::cout << "calling gaussian_blur for d_blue" << std::endl;
+  //std::cout << "calling gaussian_blur for d_blue" << std::endl;
   gaussian_blur<<<gridSize, blockSize>>>(d_blue, d_blueBlurred, numRows, numCols, d_filter, filterWidth);
 
   // Again, call cudaDeviceSynchronize(), then call checkCudaErrors() immediately after
@@ -323,7 +323,7 @@ void your_gaussian_blur(const uchar4 * const h_inputImageRGBA, uchar4 * const d_
   //
   // NOTE: This kernel launch depends on the gridSize and blockSize variables,
   // which you must set yourself.
-  std::cout << "calling recombineChannels" << std::endl;
+  //std::cout << "calling recombineChannels" << std::endl;
   recombineChannels<<<gridSize, blockSize>>>(d_redBlurred,
                                              d_greenBlurred,
                                              d_blueBlurred,
